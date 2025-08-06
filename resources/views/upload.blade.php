@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>檔案上傳</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .user-info {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 8px 0;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+        .logout-btn {
+            background-color: #dc3545;
+        }
+        .logout-btn:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>檔案上傳</h2>
+        
+        <div class="user-info">
+            <p>歡迎，<span id="username"></span>！</p>
+            <p>使用者 ID：<span id="userId"></span></p>
+        </div>
+
+        <form id="uploadForm">
+            <input type="file" name="file" accept="*/*" required>
+            <button type="submit">上傳檔案</button>
+        </form>
+        
+        <button class="btn-secondary" onclick="location.href='{{ route('login') }}'">返回登入</button>
+        <button class="btn-secondary" onclick="location.href='{{ route('files') }}'">查看檔案清單</button>
+        <button class="logout-btn" onclick="logout()">登出</button>
+    </div>
+
+    <script>
+    // 檢查登入狀態
+    window.onload = function() {
+        const isLoggedIn = localStorage.getItem('isLoggedIn');
+        const username = localStorage.getItem('username');
+        const userId = localStorage.getItem('userId');
+        
+        if (!isLoggedIn || !username || !userId) {
+            alert('請先登入！');
+            location.href = '{{ route('login') }}';
+            return;
+        }
+        
+        document.getElementById('username').textContent = username;
+        document.getElementById('userId').textContent = userId;
+    };
+
+    // 登出功能
+    function logout() {
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('username');
+        location.href = '{{ route('login') }}';
+    }
+
+    // 檔案上傳
+    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const fileInput = form.querySelector('input[type="file"]');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+            alert('請選擇檔案！');
+            return;
+        }
+        
+        // 檢查登入狀態
+        const userId = localStorage.getItem('userId');
+        if (!userId) {
+            alert('請先登入！');
+            location.href = '{{ route('login') }}';
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('user_id', userId);
+        
+        try {
+            const res = await fetch('/api/upload', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: formData
+            });
+            const data = await res.json();
+            alert(data.message);
+            
+            if (data.success) {
+                fileInput.value = ''; // 清空檔案選擇
+            }
+        } catch (error) {
+            alert('上傳失敗：' + error.message);
+        }
+    });
+    </script>
+</body>
+</html> 

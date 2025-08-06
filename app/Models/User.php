@@ -18,7 +18,8 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'name',
+        'id',
+        'username',
         'email',
         'password',
     ];
@@ -41,4 +42,18 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    /**
+     * 指定主鍵為字串類型
+     */
+    protected $keyType = 'string';
+    public $incrementing = false;
+
+    /**
+     * 取得使用者的檔案
+     */
+    public function files()
+    {
+        return $this->hasMany(File::class, 'user_id', 'id');
+    }
 }

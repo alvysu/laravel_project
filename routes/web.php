@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PageController;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,3 +17,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// 頁面路由
+Route::get('/register', [PageController::class, 'showRegister'])->name('register');
+Route::get('/login', [PageController::class, 'showLogin'])->name('login');
+Route::get('/upload', [PageController::class, 'showUpload'])->name('upload');
+Route::get('/files', [PageController::class, 'showFiles'])->name('files');
