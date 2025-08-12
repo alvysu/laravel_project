@@ -37,4 +37,12 @@ class PageController extends Controller
     {
         return view('files');
     }
+
+    /**
+     * 顯示個人資料頁面
+     */
+    public function showProfile()
+    {
+        return view('profile');
+    }
 } 

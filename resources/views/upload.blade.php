@@ -78,9 +78,8 @@
             <input type="file" name="file" accept="*/*" required>
             <button type="submit">上傳檔案</button>
         </form>
-        
-        <button class="btn-secondary" onclick="location.href='{{ route('login') }}'">返回登入</button>
         <button class="btn-secondary" onclick="location.href='{{ route('files') }}'">查看檔案清單</button>
+        <button class="btn-secondary" onclick="location.href='{{ route('profile') }}'">個人資料</button>
         <button class="logout-btn" onclick="logout()">登出</button>
     </div>
 

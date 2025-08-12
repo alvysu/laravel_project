@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -39,16 +40,18 @@ class AuthController extends Controller
         }
 
         try {
+            // 使用 PDO 操作資料庫
+            $pdo = DB::connection()->getPdo();
+            
             // 產生不重複的 user ID
             $id = 'user_' . bin2hex(random_bytes(8));
+            $username = trim($request->username);
+            $email = trim($request->email);
+            $hashedPassword = Hash::make($request->password);
             
-            // 建立新使用者
-            $user = User::create([
-                'id' => $id,
-                'username' => trim($request->username),
-                'password' => Hash::make($request->password),
-                'email' => trim($request->email),
-            ]);
+            // 使用 PDO 插入資料
+            $stmt = $pdo->prepare("INSERT INTO users (id, username, email, password) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$id, $username, $email, $hashedPassword]);
 
             return response()->json([
                 'success' => true,
@@ -85,8 +88,11 @@ class AuthController extends Controller
         }
 
         try {
-            // 查詢使用者
-            $user = User::where('username', $request->username)->first();
+            // 使用 PDO 查詢使用者
+            $pdo = DB::connection()->getPdo();
+            $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
+            $stmt->execute([$request->username]);
+            $user = $stmt->fetch(\PDO::FETCH_ASSOC);
 
             if (!$user) {
                 return response()->json([
@@ -96,14 +102,14 @@ class AuthController extends Controller
             }
 
             // 驗證密碼
-            if (Hash::check($request->password, $user->password)) {
+            if (Hash::check($request->password, $user['password'])) {
                 // 登入成功，建立 session
-                Auth::login($user);
+                Auth::login(User::find($user['id']));
                 
                 return response()->json([
                     'success' => true,
                     'message' => '登入成功',
-                    'user_id' => $user->id
+                    'user_id' => $user['id']
                 ]);
             } else {
                 return response()->json([
@@ -116,6 +122,25 @@ class AuthController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => '登入失敗：' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * 處理使用者登出
+     */
+    public function logout(): JsonResponse
+    {
+        try {
+            Auth::logout();
+            return response()->json([
+                'success' => true,
+                'message' => '登出成功'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => '登出失敗：' . $e->getMessage()
             ], 500);
         }
     }

@@ -23,3 +23,4 @@ Route::get('/register', [PageController::class, 'showRegister'])->name('register
 Route::get('/login', [PageController::class, 'showLogin'])->name('login');
 Route::get('/upload', [PageController::class, 'showUpload'])->name('upload');
 Route::get('/files', [PageController::class, 'showFiles'])->name('files');
+Route::get('/profile', [PageController::class, 'showProfile'])->name('profile');
