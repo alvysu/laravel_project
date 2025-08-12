@@ -9,7 +9,7 @@ return new class extends Migration
     {
         Schema::create('posts', function (Blueprint $table) {
             $table->id('posts_id');
-            $table->unsignedBigInteger('user_id');
+            $table->string('user_id'); // 改為字串類型，匹配 users 表的 ID
             $table->string('title');
             $table->text('content');
             $table->dateTime('created_time');

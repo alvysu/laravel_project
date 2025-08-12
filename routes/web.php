@@ -24,3 +24,12 @@ Route::get('/login', [PageController::class, 'showLogin'])->name('login');
 Route::get('/upload', [PageController::class, 'showUpload'])->name('upload');
 Route::get('/files', [PageController::class, 'showFiles'])->name('files');
 Route::get('/profile', [PageController::class, 'showProfile'])->name('profile');
+
+// 簡單的文章路由
+Route::get('/posts', function () {
+    return view('posts.index');
+})->name('posts');
+
+Route::get('/posts/create', function () {
+    return view('posts.create');
+})->name('posts.create');

@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\PostController;
 
 /*
 |--------------------------------------------------------------------------
@@ -37,3 +38,12 @@ Route::post('/upload', [FileController::class, 'upload']);
 Route::get('/files', [FileController::class, 'listFiles']);
 Route::get('/download/{fileId}', [FileController::class, 'download']);
 Route::post('/download-file/{fileId}', [FileController::class, 'downloadFile']);
+
+// 文章管理 API 路由
+Route::post('/posts', [PostController::class, 'create']);
+Route::get('/posts', [PostController::class, 'list']);
+Route::get('/posts/{postId}', [PostController::class, 'show']);
+Route::put('/posts/{postId}', [PostController::class, 'update']);
+Route::delete('/posts/{postId}', [PostController::class, 'delete']);
+Route::get('/categories', [PostController::class, 'getCategories']);
+Route::get('/tags', [PostController::class, 'getTags']);

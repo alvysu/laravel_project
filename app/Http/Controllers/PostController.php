@@ -49,14 +49,15 @@ class PostController extends Controller
             $userId = $request->user_id;
             $currentTime = now();
 
-            // 插入文章
+            // 生成一個簡單的 posts_id（使用時間戳的後幾位數字）
+            $postId = (int)substr(time(), -6);
+            
+            // 插入文章（包含 posts_id）
             $stmt = $pdo->prepare("
-                INSERT INTO posts (user_id, title, content, created_time, category_id, tag_id, updated_time) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO posts (posts_id, user_id, title, content, created_time, category_id, tag_id, updated_time, status) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
-            $stmt->execute([$userId, $title, $content, $currentTime, $categoryId, $tagId, $currentTime]);
-
-            $postId = $pdo->lastInsertId();
+            $stmt->execute([$postId, $userId, $title, $content, $currentTime, $categoryId, $tagId, $currentTime, 'draft']);
 
             return response()->json([
                 'success' => true,
