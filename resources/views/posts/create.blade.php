@@ -24,7 +24,13 @@
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h1>創建新文章</h1>
-                    <a href="/posts" class="btn btn-outline-secondary">返回文章列表</a>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="alert alert-info mb-0 py-2">
+                            <i class="fas fa-user"></i> 
+                            目前登入使用者 ID: <strong id="currentUserId">載入中...</strong>
+                        </div>
+                        <a href="/posts" class="btn btn-outline-secondary">返回文章列表</a>
+                    </div>
                 </div>
 
                 <!-- 提示訊息區域 -->
@@ -104,6 +110,27 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // 顯示登入狀態
+        function displayLoginStatus() {
+            const currentUserIdElement = document.getElementById('currentUserId');
+            
+            // 從 localStorage 取得登入資訊
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            const userId = localStorage.getItem('userId');
+            const username = localStorage.getItem('username');
+            
+            if (isLoggedIn && userId) {
+                currentUserIdElement.textContent = `${userId} (${username || '未知使用者'})`;
+                currentUserIdElement.className = 'text-success';
+            } else {
+                currentUserIdElement.textContent = '未登入';
+                currentUserIdElement.className = 'text-danger';
+            }
+        }
+
+        // 頁面載入時顯示登入狀態
+        displayLoginStatus();
+
         document.getElementById('createPostForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -123,12 +150,22 @@
 
             try {
                 // 準備資料
+                // 從 localStorage 取得使用者 ID
+                const userId = localStorage.getItem('userId');
+                if (!userId) {
+                    showAlert('請先登入！', 'warning');
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 1500);
+                    return;
+                }
+
                 const postData = {
                     title: title,
                     content: content,
                     category_id: parseInt(categoryId),
                     tag_id: tagId ? parseInt(tagId) : null,
-                    user_id: 'user_770f0005165b3900', // 使用您資料庫中實際存在的使用者 ID
+                    user_id: userId,
                     status: 'draft'
                 };
 
@@ -152,7 +189,14 @@
                         window.location.href = '/posts';
                     }, 1500);
                 } else {
-                    showAlert('創建文章失敗：' + data.message, 'danger');
+                    if (response.status === 401 && data.redirect) {
+                        showAlert('請先登入！正在跳轉到登入頁面...', 'warning');
+                        setTimeout(() => {
+                            window.location.href = data.redirect;
+                        }, 1500);
+                    } else {
+                        showAlert('創建文章失敗：' + data.message, 'danger');
+                    }
                 }
             } catch (error) {
                 console.error('創建文章失敗:', error);

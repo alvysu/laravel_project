@@ -25,9 +25,15 @@
             <div class="col-md-8">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h1>編輯文章</h1>
-                    <a href="/posts" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left"></i> 返回文章列表
-                    </a>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="alert alert-info mb-0 py-2">
+                            <i class="fas fa-user"></i> 
+                            目前登入使用者 ID: <strong id="currentUserId">載入中...</strong>
+                        </div>
+                        <a href="/posts" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> 返回文章列表
+                        </a>
+                    </div>
                 </div>
 
                 <!-- 載入中提示 -->
@@ -99,8 +105,29 @@
         let currentPostId = null;
         let currentPost = null;
 
+        // 顯示登入狀態
+        function displayLoginStatus() {
+            const currentUserIdElement = document.getElementById('currentUserId');
+            
+            // 從 localStorage 取得登入資訊
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            const userId = localStorage.getItem('userId');
+            const username = localStorage.getItem('username');
+            
+            if (isLoggedIn && userId) {
+                currentUserIdElement.textContent = `${userId} (${username || '未知使用者'})`;
+                currentUserIdElement.className = 'text-success';
+            } else {
+                currentUserIdElement.textContent = '未登入';
+                currentUserIdElement.className = 'text-danger';
+            }
+        }
+
         // 頁面載入完成後執行
         document.addEventListener('DOMContentLoaded', function() {
+            // 顯示登入狀態
+            displayLoginStatus();
+            
             // 從 URL 獲取文章 ID
             const urlParts = window.location.pathname.split('/');
             currentPostId = urlParts[urlParts.length - 2]; // /posts/{id}/edit
@@ -212,12 +239,22 @@
             setLoadingState(true);
 
             try {
+                // 從 localStorage 取得使用者 ID
+                const userId = localStorage.getItem('userId');
+                if (!userId) {
+                    showAlert('請先登入！', 'warning');
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 1500);
+                    return;
+                }
+
                 const postData = {
                     title: title,
                     content: content,
                     category_id: parseInt(categoryId),
                     tag_id: tagId ? parseInt(tagId) : null,
-                    user_id: 'user_770f0005165b3900', // 當前使用者 ID
+                    user_id: userId,
                 };
 
                 const response = await fetch(`/api/posts/${currentPostId}`, {

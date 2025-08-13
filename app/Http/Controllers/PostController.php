@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class PostController extends Controller
 {
@@ -14,6 +15,38 @@ class PostController extends Controller
      */
     public function create(Request $request): JsonResponse
     {
+        // 檢查登入狀態 - 接受前端傳送的 user_id
+        $userId = $request->input('user_id');
+        
+        if (!$userId) {
+            return response()->json([
+                'success' => false,
+                'message' => '請先登入 (缺少 user_id)',
+                'redirect' => '/login'
+            ], 401);
+        }
+
+        // 驗證 user_id 是否存在於資料庫
+        try {
+            $pdo = DB::connection()->getPdo();
+            $stmt = $pdo->prepare("SELECT id FROM users WHERE id = ?");
+            $stmt->execute([$userId]);
+            
+            if (!$stmt->fetch()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => '使用者不存在',
+                    'redirect' => '/login'
+                ], 401);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => '驗證使用者失敗：' . $e->getMessage(),
+                'redirect' => '/login'
+            ], 500);
+        }
+
         // 驗證輸入資料
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
@@ -46,7 +79,7 @@ class PostController extends Controller
             $content = trim($request->content);
             $categoryId = $request->category_id;
             $tagId = $request->tag_id;
-            $userId = $request->user_id;
+            // $userId 已經在前面從 request 中取得並驗證過了
             $currentTime = now();
 
             // 生成一個簡單的 posts_id（使用時間戳的後幾位數字）
@@ -261,7 +294,9 @@ class PostController extends Controller
                 ], 404);
             }
             
-            if ($post['user_id'] !== $request->user_id) {
+            // 檢查權限 - 使用前端傳送的 user_id
+            $requestUserId = $request->input('user_id');
+            if ($post['user_id'] !== $requestUserId) {
                 return response()->json([
                     'success' => false,
                     'message' => '您沒有權限編輯此文章'
@@ -315,7 +350,9 @@ class PostController extends Controller
                 ], 404);
             }
             
-            if ($post['user_id'] !== $request->user_id) {
+            // 檢查權限 - 使用前端傳送的 user_id
+            $requestUserId = $request->input('user_id');
+            if ($post['user_id'] !== $requestUserId) {
                 return response()->json([
                     'success' => false,
                     'message' => '您沒有權限刪除此文章'

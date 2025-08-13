@@ -92,7 +92,7 @@
                 localStorage.setItem('userId', data.user_id);
                 localStorage.setItem('username', form.username.value);
                 
-                location.href = '/upload';
+                location.href = '/posts';
             }
         } catch (error) {
             alert('登入失敗：' + error.message);

@@ -14,7 +14,13 @@
             <div class="navbar-nav">
                 <a class="nav-link active" href="/posts">文章</a>
                 <a class="nav-link" href="/posts/create">創建文章</a>
+                <a class="nav-link" href="/upload">上傳</a>
                 <a class="nav-link" href="/files">檔案</a>
+            </div>
+            <div class="navbar-nav ms-auto">
+                <button class="btn btn-outline-light btn-sm" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> 登出
+                </button>
             </div>
         </div>
     </nav>
@@ -24,9 +30,15 @@
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h1>文章列表</h1>
-                    <a href="/posts/create" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> 創建文章
-                    </a>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="alert alert-info mb-0 py-2">
+                            <i class="fas fa-user"></i> 
+                            目前登入使用者 ID: <strong id="currentUserId">載入中...</strong>
+                        </div>
+                        <a href="/posts/create" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> 創建文章
+                        </a>
+                    </div>
                 </div>
 
                 <!-- 搜尋和篩選區域 -->
@@ -140,8 +152,16 @@
         let currentTag = '';
         let currentSearch = '';
 
+        // 取得目前登入使用者的 ID
+        function getCurrentUserId() {
+            return localStorage.getItem('userId');
+        }
+
         // 頁面載入完成後執行
         document.addEventListener('DOMContentLoaded', function() {
+            // 顯示登入狀態
+            displayLoginStatus();
+            
             loadCategories();
             loadTags();
             loadPosts();
@@ -268,7 +288,7 @@
                                 </h5>
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="badge bg-secondary">${post.status || 'draft'}</span>
-                                    ${post.user_id === 'user_770f0005165b3900' ? 
+                                    ${post.user_id === getCurrentUserId() ? 
                                         `<a href="/posts/${post.posts_id}/edit" class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-edit"></i> 編輯
                                         </a>` : ''
@@ -373,6 +393,35 @@
                 </div>
             `;
             postsList.style.display = 'block';
+        }
+
+        // 顯示登入狀態
+        function displayLoginStatus() {
+            const currentUserIdElement = document.getElementById('currentUserId');
+            
+            // 從 localStorage 取得登入資訊
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            const userId = localStorage.getItem('userId');
+            const username = localStorage.getItem('username');
+            
+            if (isLoggedIn && userId) {
+                currentUserIdElement.textContent = `${userId} (${username || '未知使用者'})`;
+                currentUserIdElement.className = 'text-success';
+            } else {
+                currentUserIdElement.textContent = '未登入';
+                currentUserIdElement.className = 'text-danger';
+            }
+        }
+
+        // 登出函數
+        function logout() {
+            // 清除 localStorage 中的登入狀態
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('username');
+            
+            // 跳轉到首頁
+            window.location.href = '/login';
         }
     </script>
 </body>

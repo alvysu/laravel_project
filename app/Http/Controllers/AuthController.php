@@ -104,7 +104,11 @@ class AuthController extends Controller
             // 驗證密碼
             if (Hash::check($request->password, $user['password'])) {
                 // 登入成功，建立 session
-                Auth::login(User::find($user['id']));
+                Auth::loginUsingId($user['id']);
+                
+                // 強制設定 session
+                session(['user_id' => $user['id']]);
+                session(['username' => $user['username']]);
                 
                 return response()->json([
                     'success' => true,
