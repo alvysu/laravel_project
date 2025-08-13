@@ -121,6 +121,7 @@ class PostController extends Controller
             $sql = "
                 SELECT 
                     p.posts_id,
+                    p.user_id,
                     p.title,
                     p.content,
                     p.created_time,
@@ -176,6 +177,7 @@ class PostController extends Controller
             $stmt = $pdo->prepare("
                 SELECT 
                     p.posts_id,
+                    p.user_id,
                     p.title,
                     p.content,
                     p.created_time,

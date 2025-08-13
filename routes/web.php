@@ -33,3 +33,8 @@ Route::get('/posts', function () {
 Route::get('/posts/create', function () {
     return view('posts.create');
 })->name('posts.create');
+
+// 文章編輯頁面路由
+Route::get('/posts/{postId}/edit', function ($postId) {
+    return view('posts.edit');
+})->name('posts.edit');
