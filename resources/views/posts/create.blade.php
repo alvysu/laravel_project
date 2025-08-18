@@ -52,6 +52,7 @@
                                         <textarea class="form-control" id="content" name="content" rows="10" required></textarea>
                                     </div>
 
+                                    <!-- 註解掉分類和標籤選擇
                                     <div class="row">
                                         <div class="col-md-6">
                                             <div class="mb-3">
@@ -76,6 +77,7 @@
                                             </div>
                                         </div>
                                     </div>
+                                    -->
 
                                     <div class="d-grid">
                                         <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
@@ -96,8 +98,8 @@
                             <div class="card-body">
                                 <ul class="list-unstyled">
                                     <li>• 標題和內容為必填項目</li>
-                                    <li>• 分類必須選擇</li>
-                                    <li>• 標籤為可選項目</li>
+                                    <!-- <li>• 分類必須選擇</li> -->
+                                    <!-- <li>• 標籤為可選項目</li> -->
                                     <li>• 創建後可以編輯和刪除</li>
                                 </ul>
                             </div>
@@ -136,11 +138,11 @@
             
             const title = document.getElementById('title').value.trim();
             const content = document.getElementById('content').value.trim();
-            const categoryId = document.getElementById('category_id').value;
-            const tagId = document.getElementById('tag_id').value;
+            // const categoryId = document.getElementById('category_id').value;
+            // const tagId = document.getElementById('tag_id').value;
 
             // 驗證表單
-            if (!title || !content || !categoryId) {
+            if (!title || !content) {
                 showAlert('請填寫所有必填項目！', 'warning');
                 return;
             }
@@ -163,10 +165,10 @@
                 const postData = {
                     title: title,
                     content: content,
-                    category_id: parseInt(categoryId),
-                    tag_id: tagId ? parseInt(tagId) : null,
-                    user_id: userId,
-                    status: 'draft'
+                    // category_id: parseInt(categoryId),
+                    // tag_id: tagId ? parseInt(tagId) : null,
+                    user_id: userId
+                    // status: 'draft'
                 };
 
                 // 發送請求到後端

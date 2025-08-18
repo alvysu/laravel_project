@@ -51,14 +51,13 @@ class PostController extends Controller
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
             'content' => 'required|string',
-            'category_id' => 'required|integer|exists:categories,category_id',
+            'category_id' => 'nullable|integer|exists:categories,category_id',
             'tag_id' => 'nullable|integer|exists:tags,tag_id',
             'user_id' => 'required|string|exists:users,id',
         ], [
             'title.required' => '文章標題為必填',
             'title.max' => '文章標題不能超過 255 字',
             'content.required' => '文章內容為必填',
-            'category_id.required' => '分類為必填',
             'category_id.exists' => '選擇的分類不存在',
             'tag_id.exists' => '選擇的標籤不存在',
             'user_id.required' => '使用者 ID 為必填',
@@ -77,9 +76,8 @@ class PostController extends Controller
             
             $title = trim($request->title);
             $content = trim($request->content);
-            $categoryId = $request->category_id;
-            $tagId = $request->tag_id;
-            // $userId 已經在前面從 request 中取得並驗證過了
+            $categoryId = $request->input('category_id');
+            $tagId = $request->input('tag_id');
             $currentTime = now();
 
             // 生成一個簡單的 posts_id（使用時間戳的後幾位數字）
@@ -87,10 +85,10 @@ class PostController extends Controller
             
             // 插入文章（包含 posts_id）
             $stmt = $pdo->prepare("
-                INSERT INTO posts (posts_id, user_id, title, content, created_time, category_id, tag_id, updated_time, status) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO posts (posts_id, user_id, title, content, created_time, category_id, tag_id, updated_time) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ");
-            $stmt->execute([$postId, $userId, $title, $content, $currentTime, $categoryId, $tagId, $currentTime, 'draft']);
+            $stmt->execute([$postId, $userId, $title, $content, $currentTime, $categoryId, $tagId, $currentTime]);
 
             return response()->json([
                 'success' => true,
@@ -161,13 +159,13 @@ class PostController extends Controller
                     p.updated_time,
                     p.category_id,
                     p.tag_id,
-                    u.username as author_name,
-                    c.name as category_name,
-                    t.name as tag_name
+                    u.username as author_name
+                    /* c.name as category_name, */
+                    /* t.name as tag_name */
                 FROM posts p
                 LEFT JOIN users u ON p.user_id = u.id
-                LEFT JOIN categories c ON p.category_id = c.category_id
-                LEFT JOIN tags t ON p.tag_id = t.tag_id
+                /* LEFT JOIN categories c ON p.category_id = c.category_id */
+                /* LEFT JOIN tags t ON p.tag_id = t.tag_id */
                 {$whereClause}
                 ORDER BY p.created_time DESC
                 LIMIT ? OFFSET ?

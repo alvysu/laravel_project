@@ -45,5 +45,5 @@ Route::get('/posts', [PostController::class, 'list']);
 Route::get('/posts/{postId}', [PostController::class, 'show']);
 Route::put('/posts/{postId}', [PostController::class, 'update']);
 Route::delete('/posts/{postId}', [PostController::class, 'delete']);
-Route::get('/categories', [PostController::class, 'getCategories']);
-Route::get('/tags', [PostController::class, 'getTags']);
+// Route::get('/categories', [PostController::class, 'getCategories']);
+// Route::get('/tags', [PostController::class, 'getTags']);

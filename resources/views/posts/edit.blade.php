@@ -59,6 +59,7 @@
                                     <textarea class="form-control" id="content" name="content" rows="10" required></textarea>
                                 </div>
 
+                                <!-- 註解掉分類和標籤選擇
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="mb-3">
@@ -77,6 +78,7 @@
                                         </div>
                                     </div>
                                 </div>
+                                -->
 
                                 <div class="d-flex justify-content-between">
                                     <button type="button" class="btn btn-outline-secondary" onclick="goBack()">
@@ -138,8 +140,8 @@
             }
 
             // 載入分類和標籤
-            loadCategories();
-            loadTags();
+            // loadCategories();
+            // loadTags();
             
             // 載入文章資料
             loadPost();
