@@ -217,7 +217,7 @@ class PostController extends Controller
                     p.tag_id,
                     u.username as author_name,
                     c.name as category_name,
-                    t.name as tag_name
+                    t.tag_name as tag_name
                 FROM posts p
                 LEFT JOIN users u ON p.user_id = u.id
                 LEFT JOIN categories c ON p.category_id = c.category_id
@@ -256,14 +256,13 @@ class PostController extends Controller
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
             'content' => 'required|string',
-            'category_id' => 'required|integer|exists:categories,category_id',
+            'category_id' => 'nullable|integer|exists:categories,category_id',
             'tag_id' => 'nullable|integer|exists:tags,tag_id',
             'user_id' => 'required|string|exists:users,id',
         ], [
             'title.required' => '文章標題為必填',
             'title.max' => '文章標題不能超過 255 字',
             'content.required' => '文章內容為必填',
-            'category_id.required' => '分類為必填',
             'category_id.exists' => '選擇的分類不存在',
             'tag_id.exists' => '選擇的標籤不存在',
             'user_id.required' => '使用者 ID 為必填',
@@ -407,7 +406,7 @@ class PostController extends Controller
         try {
             $pdo = DB::connection()->getPdo();
             
-            $stmt = $pdo->prepare("SELECT tag_id, name FROM tags ORDER BY name");
+            $stmt = $pdo->prepare("SELECT tag_id, tag_name FROM tags ORDER BY tag_name");
             $stmt->execute();
             $tags = $stmt->fetchAll(\PDO::FETCH_ASSOC);
             

@@ -111,17 +111,19 @@
         function displayLoginStatus() {
             const currentUserIdElement = document.getElementById('currentUserId');
             
-            // 從 localStorage 取得登入資訊
-            const isLoggedIn = localStorage.getItem('isLoggedIn');
-            const userId = localStorage.getItem('userId');
-            const username = localStorage.getItem('username');
-            
-            if (isLoggedIn && userId) {
-                currentUserIdElement.textContent = `${userId} (${username || '未知使用者'})`;
-                currentUserIdElement.className = 'text-success';
-            } else {
-                currentUserIdElement.textContent = '未登入';
-                currentUserIdElement.className = 'text-danger';
+            if (currentUserIdElement) {
+                // 從 localStorage 取得登入資訊
+                const isLoggedIn = localStorage.getItem('isLoggedIn');
+                const userId = localStorage.getItem('userId');
+                const username = localStorage.getItem('username');
+                
+                if (isLoggedIn && userId) {
+                    currentUserIdElement.textContent = `${userId} (${username || '未知使用者'})`;
+                    currentUserIdElement.className = 'text-success';
+                } else {
+                    currentUserIdElement.textContent = '未登入';
+                    currentUserIdElement.className = 'text-danger';
+                }
             }
         }
 
@@ -220,8 +222,18 @@
 
             document.getElementById('title').value = currentPost.title;
             document.getElementById('content').value = currentPost.content;
-            document.getElementById('category_id').value = currentPost.category_id;
-            document.getElementById('tag_id').value = currentPost.tag_id || '';
+            
+            // 檢查分類選擇器是否存在
+            const categorySelect = document.getElementById('category_id');
+            if (categorySelect) {
+                categorySelect.value = currentPost.category_id || '';
+            }
+            
+            // 檢查標籤選擇器是否存在
+            const tagSelect = document.getElementById('tag_id');
+            if (tagSelect) {
+                tagSelect.value = currentPost.tag_id || '';
+            }
         }
 
         // 處理表單提交
@@ -230,10 +242,16 @@
             
             const title = document.getElementById('title').value.trim();
             const content = document.getElementById('content').value.trim();
-            const categoryId = document.getElementById('category_id').value;
-            const tagId = document.getElementById('tag_id').value;
+            
+            // 檢查分類選擇器是否存在
+            const categorySelect = document.getElementById('category_id');
+            const categoryId = categorySelect ? categorySelect.value : null;
+            
+            // 檢查標籤選擇器是否存在
+            const tagSelect = document.getElementById('tag_id');
+            const tagId = tagSelect ? tagSelect.value : null;
 
-            if (!title || !content || !categoryId) {
+            if (!title || !content) {
                 showAlert('請填寫所有必填項目！', 'warning');
                 return;
             }
@@ -254,7 +272,7 @@
                 const postData = {
                     title: title,
                     content: content,
-                    category_id: parseInt(categoryId),
+                    category_id: categoryId ? parseInt(categoryId) : null,
                     tag_id: tagId ? parseInt(tagId) : null,
                     user_id: userId,
                 };
@@ -289,28 +307,39 @@
 
         // 顯示表單
         function displayForm() {
-            document.getElementById('editForm').style.display = 'block';
+            const editForm = document.getElementById('editForm');
+            if (editForm) {
+                editForm.style.display = 'block';
+            }
         }
 
         // 隱藏表單
         function hideForm() {
-            document.getElementById('editForm').style.display = 'none';
+            const editForm = document.getElementById('editForm');
+            if (editForm) {
+                editForm.style.display = 'none';
+            }
         }
 
         // 顯示載入中
         function showLoading(show) {
-            document.getElementById('loading').style.display = show ? 'block' : 'none';
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.style.display = show ? 'block' : 'none';
+            }
         }
 
         // 設定載入狀態
         function setLoadingState(loading) {
             const submitBtn = document.getElementById('submitBtn');
-            if (loading) {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 更新中...';
-            } else {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-save"></i> 更新文章';
+            if (submitBtn) {
+                if (loading) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 更新中...';
+                } else {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-save"></i> 更新文章';
+                }
             }
         }
 
