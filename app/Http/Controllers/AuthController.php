@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Auth;
+
 use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
@@ -43,8 +43,8 @@ class AuthController extends Controller
             // 使用 PDO 操作資料庫
             $pdo = DB::connection()->getPdo();
             
-            // 產生不重複的 user ID
-            $id = 'user_' . bin2hex(random_bytes(8));
+            // 產生不重複的 user ID（使用整數）
+            $id = time() . rand(1000, 9999);
             $username = trim($request->username);
             $email = trim($request->email);
             $hashedPassword = Hash::make($request->password);
@@ -103,17 +103,19 @@ class AuthController extends Controller
 
             // 驗證密碼
             if (Hash::check($request->password, $user['password'])) {
-                // 登入成功，建立 session
-                Auth::loginUsingId($user['id']);
+                // 使用 Sanctum 產生標準的 API token
+                $userModel = User::where('id', $user['id'])->first();
+                if (!$userModel) {
+                    throw new \Exception('無法找到使用者模型');
+                }
                 
-                // 強制設定 session
-                session(['user_id' => $user['id']]);
-                session(['username' => $user['username']]);
+                $token = $userModel->createToken('auth-token', ['*'])->plainTextToken;
                 
                 return response()->json([
                     'success' => true,
                     'message' => '登入成功',
-                    'user_id' => $user['id']
+                    'user_id' => $user['id'],
+                    'access_token' => $token// ← 前端要存起來
                 ]);
             } else {
                 return response()->json([
@@ -133,10 +135,14 @@ class AuthController extends Controller
     /**
      * 處理使用者登出
      */
-    public function logout(): JsonResponse
+    public function logout(Request $request): JsonResponse
     {
         try {
-            Auth::logout();
+            // 撤銷當前的 API token
+            if ($request->user()) {
+                $request->user()->currentAccessToken()->delete();
+            }
+            
             return response()->json([
                 'success' => true,
                 'message' => '登出成功'

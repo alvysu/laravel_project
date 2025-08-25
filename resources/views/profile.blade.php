@@ -125,8 +125,8 @@
     <script>
     // 檢查登入狀態
     window.onload = function() {
-        const isLoggedIn = localStorage.getItem('isLoggedIn');
-        if (!isLoggedIn) {
+        const accessToken = localStorage.getItem('accessToken');
+        if (!accessToken) {
             alert('請先登入！');
             location.href = '{{ route('login') }}';
             return;
@@ -137,20 +137,13 @@
     // 載入個人資料
     async function loadProfile() {
         try {
-            const userId = localStorage.getItem('userId');
-            if (!userId) {
-                alert('請先登入！');
-                location.href = '{{ route('login') }}';
-                return;
-            }
-
             const res = await fetch('/api/profile', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
                 },
-                body: JSON.stringify({ user_id: userId })
+                body: JSON.stringify({})
             });
             const data = await res.json();
             
@@ -176,16 +169,8 @@
     document.getElementById('updateProfileForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const form = e.target;
-        const userId = localStorage.getItem('userId');
-        
-        if (!userId) {
-            alert('請先登入！');
-            location.href = '{{ route('login') }}';
-            return;
-        }
         
         const payload = {
-            user_id: userId,
             username: form.username.value,
             email: form.email.value
         };
@@ -195,7 +180,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
                 },
                 body: JSON.stringify(payload)
             });
@@ -214,16 +199,8 @@
     document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const form = e.target;
-        const userId = localStorage.getItem('userId');
-        
-        if (!userId) {
-            alert('請先登入！');
-            location.href = '{{ route('login') }}';
-            return;
-        }
         
         const payload = {
-            user_id: userId,
             current_password: form.current_password.value,
             new_password: form.new_password.value,
             confirm_password: form.confirm_password.value
@@ -234,7 +211,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
                 },
                 body: JSON.stringify(payload)
             });
@@ -253,20 +230,12 @@
     document.getElementById('deleteAccountForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const form = e.target;
-        const userId = localStorage.getItem('userId');
-        
-        if (!userId) {
-            alert('請先登入！');
-            location.href = '{{ route('login') }}';
-            return;
-        }
         
         if (!confirm('確定要刪除帳號嗎？此操作無法復原！')) {
             return;
         }
         
         const payload = {
-            user_id: userId,
             password: form.password.value
         };
         
@@ -275,7 +244,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
                 },
                 body: JSON.stringify(payload)
             });
@@ -291,19 +260,22 @@
     });
 
     // 登出功能
-    function logout() {
-        fetch('/api/logout', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
-        }).then(() => {
-            localStorage.removeItem('isLoggedIn');
-            localStorage.removeItem('userId');
-            localStorage.removeItem('username');
+    async function logout() {
+        try {
+            await fetch('/api/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
+                }
+            });
+        } catch (error) {
+            console.error('登出失敗:', error);
+        } finally {
+            // 清除本地儲存的 token
+            localStorage.removeItem('accessToken');
             location.href = '{{ route('login') }}';
-        });
+        }
     }
     </script>
 </body>

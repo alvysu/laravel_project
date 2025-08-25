@@ -108,20 +108,38 @@
         let currentPost = null;
 
         // 顯示登入狀態
-        function displayLoginStatus() {
+        async function displayLoginStatus() {
             const currentUserIdElement = document.getElementById('currentUserId');
             
             if (currentUserIdElement) {
-                // 從 localStorage 取得登入資訊
-                const isLoggedIn = localStorage.getItem('isLoggedIn');
-                const userId = localStorage.getItem('userId');
-                const username = localStorage.getItem('username');
+                const accessToken = localStorage.getItem('accessToken');
                 
-                if (isLoggedIn && userId) {
-                    currentUserIdElement.textContent = `${userId} (${username || '未知使用者'})`;
-                    currentUserIdElement.className = 'text-success';
-                } else {
+                if (!accessToken) {
                     currentUserIdElement.textContent = '未登入';
+                    currentUserIdElement.className = 'text-danger';
+                    return;
+                }
+                
+                try {
+                    // 從 API 取得使用者資訊
+                    const response = await fetch('/api/profile', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer ' + accessToken,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success) {
+                        currentUserIdElement.textContent = `${data.user.id} (${data.user.username})`;
+                        currentUserIdElement.className = 'text-success';
+                    } else {
+                        currentUserIdElement.textContent = '認證失敗';
+                        currentUserIdElement.className = 'text-danger';
+                    }
+                } catch (error) {
+                    currentUserIdElement.textContent = '載入失敗';
                     currentUserIdElement.className = 'text-danger';
                 }
             }
@@ -260,30 +278,22 @@
 
             try {
                 // 從 localStorage 取得使用者 ID
-                const userId = localStorage.getItem('userId');
-                if (!userId) {
-                    showAlert('請先登入！', 'warning');
-                    setTimeout(() => {
-                        window.location.href = '/login';
-                    }, 1500);
-                    return;
-                }
+
 
                 const postData = {
                     title: title,
                     content: content,
                     category_id: categoryId ? parseInt(categoryId) : null,
                     tag_id: tagId ? parseInt(tagId) : null,
-                    user_id: userId,
                 };
 
                 const response = await fetch(`/api/posts/${currentPostId}`, {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    },
+                                    headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
+                },
                     body: JSON.stringify(postData)
                 });
 

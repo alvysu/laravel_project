@@ -44,10 +44,10 @@ class User extends Authenticatable
     ];
 
     /**
-     * 指定主鍵為字串類型
+     * 指定主鍵為整數類型
      */
-    protected $keyType = 'string';
-    public $incrementing = false;
+    protected $keyType = 'int';
+    public $incrementing = true;
 
     /**
      * 取得使用者的檔案

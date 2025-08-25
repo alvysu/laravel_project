@@ -56,14 +56,8 @@ class FileController extends Controller
             // 儲存檔案到 storage/app/uploads 目錄
             $path = $file->storeAs('uploads', $uuidName, 'local');
 
-            // 從請求中取得使用者 ID（前端會傳送）
-            $userId = $request->input('user_id');
-            if (!$userId) {
-                return response()->json([
-                    'success' => false,
-                    'message' => '請先登入'
-                ], 401);
-            }
+            // 使用 middleware 驗證後的認證使用者
+            $userId = $request->user()->id;
 
             // 寫入資料庫
             File::create([

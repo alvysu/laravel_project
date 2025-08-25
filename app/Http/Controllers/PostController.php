@@ -15,37 +15,8 @@ class PostController extends Controller
      */
     public function create(Request $request): JsonResponse
     {
-        // 檢查登入狀態 - 接受前端傳送的 user_id
-        $userId = $request->input('user_id');
-        
-        if (!$userId) {
-            return response()->json([
-                'success' => false,
-                'message' => '請先登入 (缺少 user_id)',
-                'redirect' => '/login'
-            ], 401);
-        }
-
-        // 驗證 user_id 是否存在於資料庫
-        try {
-            $pdo = DB::connection()->getPdo();
-            $stmt = $pdo->prepare("SELECT id FROM users WHERE id = ?");
-            $stmt->execute([$userId]);
-            
-            if (!$stmt->fetch()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => '使用者不存在',
-                    'redirect' => '/login'
-                ], 401);
-            }
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => '驗證使用者失敗：' . $e->getMessage(),
-                'redirect' => '/login'
-            ], 500);
-        }
+        // 使用 middleware 驗證後的認證使用者
+        $userId = $request->user()->id;
 
         // 驗證輸入資料
         $validator = Validator::make($request->all(), [
@@ -291,9 +262,9 @@ class PostController extends Controller
                 ], 404);
             }
             
-            // 檢查權限 - 使用前端傳送的 user_id
-            $requestUserId = $request->input('user_id');
-            if ($post['user_id'] !== $requestUserId) {
+                    // 使用 middleware 驗證後的認證使用者
+            $authenticatedUserId = $request->user()->id;
+            if ((string)$post['user_id'] !== (string)$authenticatedUserId) {
                 return response()->json([
                     'success' => false,
                     'message' => '您沒有權限編輯此文章'
@@ -347,9 +318,9 @@ class PostController extends Controller
                 ], 404);
             }
             
-            // 檢查權限 - 使用前端傳送的 user_id
-            $requestUserId = $request->input('user_id');
-            if ($post['user_id'] !== $requestUserId) {
+            // 使用 middleware 驗證後的認證使用者
+            $authenticatedUserId = $request->user()->id;
+            if ((string)$post['user_id'] !== (string)$authenticatedUserId) {
                 return response()->json([
                     'success' => false,
                     'message' => '您沒有權限刪除此文章'

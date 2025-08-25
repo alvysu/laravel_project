@@ -84,28 +84,66 @@
     </div>
 
     <script>
-    // 檢查登入狀態
+    // 檢查登入狀態並取得使用者資訊
     window.onload = function() {
-        const isLoggedIn = localStorage.getItem('isLoggedIn');
-        const username = localStorage.getItem('username');
-        const userId = localStorage.getItem('userId');
-        
-        if (!isLoggedIn || !username || !userId) {
+        const accessToken = localStorage.getItem('accessToken');
+        if (!accessToken) {
             alert('請先登入！');
             location.href = '{{ route('login') }}';
             return;
         }
         
-        document.getElementById('username').textContent = username;
-        document.getElementById('userId').textContent = userId;
+        // 從 API 取得使用者資訊
+        fetchUserInfo();
     };
 
+    // 從 API 取得使用者資訊
+    async function fetchUserInfo() {
+        try {
+            const response = await fetch('/api/profile', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('accessToken'),
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                document.getElementById('username').textContent = data.user.username;
+                document.getElementById('userId').textContent = data.user.id;
+            } else {
+                // 如果取得使用者資訊失敗，可能是 token 過期
+                localStorage.removeItem('accessToken');
+                location.href = '{{ route('login') }}';
+            }
+        } catch (error) {
+            console.error('取得使用者資訊失敗:', error);
+            localStorage.removeItem('accessToken');
+            location.href = '{{ route('login') }}';
+        }
+    }
+
     // 登出功能
-    function logout() {
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem('userId');
-        localStorage.removeItem('username');
-        location.href = '{{ route('login') }}';
+    async function logout() {
+        try {
+            const response = await fetch('/api/logout', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('accessToken'),
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            // 清除本地儲存的 token
+            localStorage.removeItem('accessToken');
+            location.href = '{{ route('login') }}';
+        } catch (error) {
+            console.error('登出失敗:', error);
+            // 即使 API 呼叫失敗，也要清除本地 token
+            localStorage.removeItem('accessToken');
+            location.href = '{{ route('login') }}';
+        }
     }
 
     // 檔案上傳
@@ -120,23 +158,15 @@
             return;
         }
         
-        // 檢查登入狀態
-        const userId = localStorage.getItem('userId');
-        if (!userId) {
-            alert('請先登入！');
-            location.href = '{{ route('login') }}';
-            return;
-        }
-        
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('user_id', userId);
+        // user_id 現在由後端 middleware 自動處理
         
         try {
             const res = await fetch('/api/upload', {
                 method: 'POST',
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
                 },
                 body: formData
             });

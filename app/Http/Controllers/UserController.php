@@ -17,15 +17,8 @@ class UserController extends Controller
     public function profile(Request $request): JsonResponse
     {
         try {
-            // 從請求中取得使用者 ID（前端會傳送）
-            $userId = $request->input('user_id');
-            
-            if (!$userId) {
-                return response()->json([
-                    'success' => false,
-                    'message' => '請先登入'
-                ], 401);
-            }
+            // 使用 middleware 驗證後的認證使用者
+            $userId = $request->user()->id;
 
             // 使用 PDO 查詢使用者資料
             $pdo = DB::connection()->getPdo();
@@ -60,14 +53,8 @@ class UserController extends Controller
     public function updateProfile(Request $request): JsonResponse
     {
         try {
-            $userId = $request->input('user_id');
-            
-            if (!$userId) {
-                return response()->json([
-                    'success' => false,
-                    'message' => '請先登入'
-                ], 401);
-            }
+            // 使用 middleware 驗證後的認證使用者
+            $userId = $request->user()->id;
 
             // 驗證輸入資料
             $validator = Validator::make($request->all(), [
@@ -116,14 +103,8 @@ class UserController extends Controller
     public function changePassword(Request $request): JsonResponse
     {
         try {
-            $userId = $request->input('user_id');
-            
-            if (!$userId) {
-                return response()->json([
-                    'success' => false,
-                    'message' => '請先登入'
-                ], 401);
-            }
+            // 使用 middleware 驗證後的認證使用者
+            $userId = $request->user()->id;
 
             // 驗證輸入資料
             $validator = Validator::make($request->all(), [
@@ -183,14 +164,8 @@ class UserController extends Controller
     public function deleteAccount(Request $request): JsonResponse
     {
         try {
-            $userId = $request->input('user_id');
-            
-            if (!$userId) {
-                return response()->json([
-                    'success' => false,
-                    'message' => '請先登入'
-                ], 401);
-            }
+            // 使用 middleware 驗證後的認證使用者
+            $userId = $request->user()->id;
 
             // 驗證密碼
             $validator = Validator::make($request->all(), [

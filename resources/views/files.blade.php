@@ -122,7 +122,7 @@
             const res = await fetch(`/api/download/${fileId}`, {
                 method: 'GET',
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
                 }
             });
             
@@ -152,7 +152,7 @@
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
                 }
             });
             const data = await res.json();

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登入</title>
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -77,8 +77,7 @@
             const res = await fetch('/api/login', {
                 method: 'POST',
                 headers: { 
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(payload)
             });
@@ -87,10 +86,8 @@
             
             // 登入成功自動跳轉到上傳頁面，並保存登入狀態
             if (data.success) {
-                // 保存登入狀態到 localStorage
-                localStorage.setItem('isLoggedIn', 'true');
-                localStorage.setItem('userId', data.user_id);
-                localStorage.setItem('username', form.username.value);
+                // 保存 API token 到 localStorage（用於後續 API 請求）
+                localStorage.setItem('accessToken', data.access_token);
                 
                 location.href = '/posts';
             }

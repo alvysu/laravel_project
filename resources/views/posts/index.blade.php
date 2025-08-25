@@ -153,8 +153,25 @@
         let currentSearch = '';
 
         // 取得目前登入使用者的 ID
-        function getCurrentUserId() {
-            return localStorage.getItem('userId');
+        async function getCurrentUserId() {
+            const accessToken = localStorage.getItem('accessToken');
+            if (!accessToken) return null;
+            
+            try {
+                const response = await fetch('/api/profile', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + accessToken,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                return data.success ? data.user.id : null;
+            } catch (error) {
+                console.error('取得使用者 ID 失敗:', error);
+                return null;
+            }
         }
 
         // 頁面載入完成後執行
@@ -162,8 +179,9 @@
             // 顯示登入狀態
             displayLoginStatus();
             
-            loadCategories();
-            loadTags();
+            // 暫時移除這些功能，因為 API 路由尚未實現
+            // loadCategories();
+            // loadTags();
             loadPosts();
             
             // 綁定搜尋表單事件
@@ -396,32 +414,72 @@
         }
 
         // 顯示登入狀態
-        function displayLoginStatus() {
+        async function displayLoginStatus() {
             const currentUserIdElement = document.getElementById('currentUserId');
+            const accessToken = localStorage.getItem('accessToken');
             
-            // 從 localStorage 取得登入資訊
-            const isLoggedIn = localStorage.getItem('isLoggedIn');
-            const userId = localStorage.getItem('userId');
-            const username = localStorage.getItem('username');
-            
-            if (isLoggedIn && userId) {
-                currentUserIdElement.textContent = `${userId} (${username || '未知使用者'})`;
-                currentUserIdElement.className = 'text-success';
-            } else {
+            if (!accessToken) {
                 currentUserIdElement.textContent = '未登入';
                 currentUserIdElement.className = 'text-danger';
+                return;
+            }
+            
+            try {
+                // 從 API 取得使用者資訊
+                const response = await fetch('/api/profile', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + accessToken,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        currentUserIdElement.textContent = `${data.user.id} (${data.user.username})`;
+                        currentUserIdElement.className = 'text-success';
+                    } else {
+                        currentUserIdElement.textContent = '認證失敗';
+                        currentUserIdElement.className = 'text-warning';
+                    }
+                } else {
+                    currentUserIdElement.textContent = '認證失敗';
+                    currentUserIdElement.className = 'text-warning';
+                }
+            } catch (error) {
+                console.error('取得使用者資訊失敗:', error);
+                currentUserIdElement.textContent = '連線失敗';
+                currentUserIdElement.className = 'text-warning';
             }
         }
 
         // 登出函數
-        function logout() {
-            // 清除 localStorage 中的登入狀態
-            localStorage.removeItem('isLoggedIn');
-            localStorage.removeItem('userId');
-            localStorage.removeItem('username');
-            
-            // 跳轉到首頁
-            window.location.href = '/login';
+        async function logout() {
+            try {
+                // 呼叫登出 API
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('accessToken'),
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                // 清除 localStorage 中的登入狀態
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('username');
+                localStorage.removeItem('accessToken');
+                
+                // 跳轉到登入頁面
+                window.location.href = '/login';
+            } catch (error) {
+                console.error('登出失敗:', error);
+                // 即使 API 失敗，也要清除本地狀態
+                localStorage.clear();
+                window.location.href = '/login';
+            }
         }
     </script>
 </body>
