@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Post;
+use App\Models\Category;
+use App\Models\Tag;
 
 class PostController extends Controller
 {
@@ -24,15 +26,12 @@ class PostController extends Controller
             'content' => 'required|string',
             'category_id' => 'nullable|integer|exists:categories,category_id',
             'tag_id' => 'nullable|integer|exists:tags,tag_id',
-            'user_id' => 'required|string|exists:users,id',
         ], [
             'title.required' => '文章標題為必填',
             'title.max' => '文章標題不能超過 255 字',
             'content.required' => '文章內容為必填',
             'category_id.exists' => '選擇的分類不存在',
             'tag_id.exists' => '選擇的標籤不存在',
-            'user_id.required' => '使用者 ID 為必填',
-            'user_id.exists' => '使用者不存在',
         ]);
 
         if ($validator->fails()) {
@@ -43,8 +42,6 @@ class PostController extends Controller
         }
 
         try {
-            $pdo = DB::connection()->getPdo();
-            
             $title = trim($request->title);
             $content = trim($request->content);
             $categoryId = $request->input('category_id');
@@ -54,12 +51,17 @@ class PostController extends Controller
             // 生成一個簡單的 posts_id（使用時間戳的後幾位數字）
             $postId = (int)substr(time(), -6);
             
-            // 插入文章（包含 posts_id）
-            $stmt = $pdo->prepare("
-                INSERT INTO posts (posts_id, user_id, title, content, created_time, category_id, tag_id, updated_time) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-            $stmt->execute([$postId, $userId, $title, $content, $currentTime, $categoryId, $tagId, $currentTime]);
+            // 使用 Eloquent ORM 創建文章
+            Post::create([
+                'posts_id' => $postId,
+                'user_id' => $userId,
+                'title' => $title,
+                'content' => $content,
+                'created_time' => $currentTime,
+                'category_id' => $categoryId,
+                'tag_id' => $tagId,
+                'updated_time' => $currentTime
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -81,82 +83,68 @@ class PostController extends Controller
     public function list(Request $request): JsonResponse
     {
         try {
-            $pdo = DB::connection()->getPdo();
-            
             $page = $request->input('page', 1);
             $perPage = $request->input('per_page', 10);
             $categoryId = $request->input('category_id');
             $tagId = $request->input('tag_id');
             $search = $request->input('search');
             
-            $offset = ($page - 1) * $perPage;
+            // 使用 Eloquent ORM 查詢文章
+            $query = Post::with('user')
+                ->select([
+                    'posts_id',
+                    'user_id',
+                    'title',
+                    'content',
+                    'created_time',
+                    'updated_time',
+                    'category_id',
+                    'tag_id'
+                ]);
             
-            // 構建查詢條件
-            $whereConditions = [];
-            $params = [];
-            
+            // 添加查詢條件
             if ($categoryId) {
-                $whereConditions[] = "p.category_id = ?";
-                $params[] = $categoryId;
+                $query->where('category_id', $categoryId);
             }
             
             if ($tagId) {
-                $whereConditions[] = "p.tag_id = ?";
-                $params[] = $tagId;
+                $query->where('tag_id', $tagId);
             }
             
             if ($search) {
-                $whereConditions[] = "(p.title LIKE ? OR p.content LIKE ?)";
-                $params[] = "%{$search}%";
-                $params[] = "%{$search}%";
+                $query->where(function($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                      ->orWhere('content', 'like', "%{$search}%");
+                });
             }
             
-            $whereClause = !empty($whereConditions) ? "WHERE " . implode(" AND ", $whereConditions) : "";
+            // 分頁查詢
+            $posts = $query->orderBy('created_time', 'desc')
+                          ->paginate($perPage, ['*'], 'page', $page);
             
-            // 查詢文章總數
-            $countSql = "SELECT COUNT(*) FROM posts p {$whereClause}";
-            $countStmt = $pdo->prepare($countSql);
-            $countStmt->execute($params);
-            $total = $countStmt->fetchColumn();
-            
-            // 查詢文章列表
-            $sql = "
-                SELECT 
-                    p.posts_id,
-                    p.user_id,
-                    p.title,
-                    p.content,
-                    p.created_time,
-                    p.updated_time,
-                    p.category_id,
-                    p.tag_id,
-                    u.username as author_name
-                    /* c.name as category_name, */
-                    /* t.name as tag_name */
-                FROM posts p
-                LEFT JOIN users u ON p.user_id = u.id
-                /* LEFT JOIN categories c ON p.category_id = c.category_id */
-                /* LEFT JOIN tags t ON p.tag_id = t.tag_id */
-                {$whereClause}
-                ORDER BY p.created_time DESC
-                LIMIT ? OFFSET ?
-            ";
-            
-            $params[] = $perPage;
-            $params[] = $offset;
-            
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
-            $posts = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            // 格式化回應資料
+            $formattedPosts = $posts->getCollection()->map(function($post) {
+                return [
+                    'posts_id' => $post->posts_id,
+                    'user_id' => $post->user_id,
+                    'title' => $post->title,
+                    'content' => $post->content,
+                    'created_time' => $post->created_time,
+                    'updated_time' => $post->updated_time,
+                    'category_id' => $post->category_id,
+                    'tag_id' => $post->tag_id,
+                    'author_name' => $post->user ? $post->user->username : null
+                ];
+            });
             
             return response()->json([
                 'success' => true,
-                'posts' => $posts,
+                'posts' => $formattedPosts,
                 'pagination' => [
-                    'current_page' => $page,
-                    'per_page' => $perPage,
-                    'total' => $total,
-                    'last_page' => ceil($total / $perPage)
+                    'current_page' => $posts->currentPage(),
+                    'per_page' => $posts->perPage(),
+                    'total' => $posts->total(),
+                    'last_page' => $posts->lastPage()
                 ]
             ]);
 
@@ -174,29 +162,10 @@ class PostController extends Controller
     public function show($postId): JsonResponse
     {
         try {
-            $pdo = DB::connection()->getPdo();
-            
-            $stmt = $pdo->prepare("
-                SELECT 
-                    p.posts_id,
-                    p.user_id,
-                    p.title,
-                    p.content,
-                    p.created_time,
-                    p.updated_time,
-                    p.category_id,
-                    p.tag_id,
-                    u.username as author_name,
-                    c.name as category_name,
-                    t.tag_name as tag_name
-                FROM posts p
-                LEFT JOIN users u ON p.user_id = u.id
-                LEFT JOIN categories c ON p.category_id = c.category_id
-                LEFT JOIN tags t ON p.tag_id = t.tag_id
-                WHERE p.posts_id = ?
-            ");
-            $stmt->execute([$postId]);
-            $post = $stmt->fetch(\PDO::FETCH_ASSOC);
+            // 使用 Eloquent ORM 查詢文章
+            $post = Post::with(['user', 'category', 'tag'])
+                ->where('posts_id', $postId)
+                ->first();
             
             if (!$post) {
                 return response()->json([
@@ -205,9 +174,24 @@ class PostController extends Controller
                 ], 404);
             }
             
+            // 格式化回應資料
+            $postData = [
+                'posts_id' => $post->posts_id,
+                'user_id' => $post->user_id,
+                'title' => $post->title,
+                'content' => $post->content,
+                'created_time' => $post->created_time,
+                'updated_time' => $post->updated_time,
+                'category_id' => $post->category_id,
+                'tag_id' => $post->tag_id,
+                'author_name' => $post->user ? $post->user->username : null,
+                'category_name' => $post->category ? $post->category->category_name : null,
+                'tag_name' => $post->tag ? $post->tag->tag_name : null
+            ];
+            
             return response()->json([
                 'success' => true,
-                'post' => $post
+                'post' => $postData
             ]);
 
         } catch (\Exception $e) {
@@ -229,15 +213,12 @@ class PostController extends Controller
             'content' => 'required|string',
             'category_id' => 'nullable|integer|exists:categories,category_id',
             'tag_id' => 'nullable|integer|exists:tags,tag_id',
-            'user_id' => 'required|string|exists:users,id',
         ], [
             'title.required' => '文章標題為必填',
             'title.max' => '文章標題不能超過 255 字',
             'content.required' => '文章內容為必填',
             'category_id.exists' => '選擇的分類不存在',
             'tag_id.exists' => '選擇的標籤不存在',
-            'user_id.required' => '使用者 ID 為必填',
-            'user_id.exists' => '使用者不存在',
         ]);
 
         if ($validator->fails()) {
@@ -248,12 +229,8 @@ class PostController extends Controller
         }
 
         try {
-            $pdo = DB::connection()->getPdo();
-            
-            // 檢查文章是否存在且屬於該使用者
-            $checkStmt = $pdo->prepare("SELECT user_id FROM posts WHERE posts_id = ?");
-            $checkStmt->execute([$postId]);
-            $post = $checkStmt->fetch(\PDO::FETCH_ASSOC);
+            // 使用 Eloquent ORM 查詢文章
+            $post = Post::where('posts_id', $postId)->first();
             
             if (!$post) {
                 return response()->json([
@@ -262,9 +239,9 @@ class PostController extends Controller
                 ], 404);
             }
             
-                    // 使用 middleware 驗證後的認證使用者
+            // 使用 middleware 驗證後的認證使用者
             $authenticatedUserId = $request->user()->id;
-            if ((string)$post['user_id'] !== (string)$authenticatedUserId) {
+            if ((string)$post->user_id !== (string)$authenticatedUserId) {
                 return response()->json([
                     'success' => false,
                     'message' => '您沒有權限編輯此文章'
@@ -277,13 +254,14 @@ class PostController extends Controller
             $tagId = $request->tag_id;
             $currentTime = now();
 
-            // 更新文章
-            $stmt = $pdo->prepare("
-                UPDATE posts 
-                SET title = ?, content = ?, category_id = ?, tag_id = ?, updated_time = ?
-                WHERE posts_id = ?
-            ");
-            $stmt->execute([$title, $content, $categoryId, $tagId, $currentTime, $postId]);
+            // 使用 Eloquent ORM 更新文章
+            $post->update([
+                'title' => $title,
+                'content' => $content,
+                'category_id' => $categoryId,
+                'tag_id' => $tagId,
+                'updated_time' => $currentTime
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -304,12 +282,8 @@ class PostController extends Controller
     public function delete(Request $request, $postId): JsonResponse
     {
         try {
-            $pdo = DB::connection()->getPdo();
-            
-            // 檢查文章是否存在且屬於該使用者
-            $checkStmt = $pdo->prepare("SELECT user_id FROM posts WHERE posts_id = ?");
-            $checkStmt->execute([$postId]);
-            $post = $checkStmt->fetch(\PDO::FETCH_ASSOC);
+            // 使用 Eloquent ORM 查詢文章
+            $post = Post::where('posts_id', $postId)->first();
             
             if (!$post) {
                 return response()->json([
@@ -320,16 +294,15 @@ class PostController extends Controller
             
             // 使用 middleware 驗證後的認證使用者
             $authenticatedUserId = $request->user()->id;
-            if ((string)$post['user_id'] !== (string)$authenticatedUserId) {
+            if ((string)$post->user_id !== (string)$authenticatedUserId) {
                 return response()->json([
                     'success' => false,
                     'message' => '您沒有權限刪除此文章'
                 ], 403);
             }
             
-            // 刪除文章
-            $stmt = $pdo->prepare("DELETE FROM posts WHERE posts_id = ?");
-            $stmt->execute([$postId]);
+            // 使用 Eloquent ORM 刪除文章
+            $post->delete();
 
             return response()->json([
                 'success' => true,
@@ -350,11 +323,10 @@ class PostController extends Controller
     public function getCategories(): JsonResponse
     {
         try {
-            $pdo = DB::connection()->getPdo();
-            
-            $stmt = $pdo->prepare("SELECT category_id, name FROM categories ORDER BY name");
-            $stmt->execute();
-            $categories = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            // 使用 Eloquent ORM 查詢分類
+            $categories = Category::select('category_id', 'category_name')
+                ->orderBy('category_name')
+                ->get();
             
             return response()->json([
                 'success' => true,
@@ -375,11 +347,10 @@ class PostController extends Controller
     public function getTags(): JsonResponse
     {
         try {
-            $pdo = DB::connection()->getPdo();
-            
-            $stmt = $pdo->prepare("SELECT tag_id, tag_name FROM tags ORDER BY tag_name");
-            $stmt->execute();
-            $tags = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            // 使用 Eloquent ORM 查詢標籤
+            $tags = Tag::select('tag_id', 'tag_name')
+                ->orderBy('tag_name')
+                ->get();
             
             return response()->json([
                 'success' => true,

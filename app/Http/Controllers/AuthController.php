@@ -8,8 +8,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
-use Illuminate\Support\Facades\DB;
-
 class AuthController extends Controller
 {
     /**
@@ -40,18 +38,19 @@ class AuthController extends Controller
         }
 
         try {
-            // 使用 PDO 操作資料庫
-            $pdo = DB::connection()->getPdo();
-            
             // 產生不重複的 user ID（使用整數）
             $id = time() . rand(1000, 9999);
             $username = trim($request->username);
             $email = trim($request->email);
             $hashedPassword = Hash::make($request->password);
             
-            // 使用 PDO 插入資料
-            $stmt = $pdo->prepare("INSERT INTO users (id, username, email, password) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$id, $username, $email, $hashedPassword]);
+            // 使用 Eloquent ORM 創建使用者
+            User::create([
+                'id' => $id,
+                'username' => $username,
+                'email' => $email,
+                'password' => $hashedPassword
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -88,11 +87,8 @@ class AuthController extends Controller
         }
 
         try {
-            // 使用 PDO 查詢使用者
-            $pdo = DB::connection()->getPdo();
-            $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
-            $stmt->execute([$request->username]);
-            $user = $stmt->fetch(\PDO::FETCH_ASSOC);
+            // 使用 Eloquent ORM 查詢使用者
+            $user = User::where('username', $request->username)->first();
 
             if (!$user) {
                 return response()->json([
@@ -102,19 +98,14 @@ class AuthController extends Controller
             }
 
             // 驗證密碼
-            if (Hash::check($request->password, $user['password'])) {
+            if (Hash::check($request->password, $user->password)) {
                 // 使用 Sanctum 產生標準的 API token
-                $userModel = User::where('id', $user['id'])->first();
-                if (!$userModel) {
-                    throw new \Exception('無法找到使用者模型');
-                }
-                
-                $token = $userModel->createToken('auth-token', ['*'])->plainTextToken;
+                $token = $user->createToken('auth-token', ['*'])->plainTextToken;
                 
                 return response()->json([
                     'success' => true,
                     'message' => '登入成功',
-                    'user_id' => $user['id'],
+                    'user_id' => $user->id,
                     'access_token' => $token// ← 前端要存起來
                 ]);
             } else {

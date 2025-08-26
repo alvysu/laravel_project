@@ -281,7 +281,7 @@
         }
 
         // 顯示文章列表
-        function displayPosts(posts) {
+        async function displayPosts(posts) {
             const postsList = document.getElementById('postsList');
             
             if (posts.length === 0) {
@@ -289,6 +289,9 @@
                 return;
             }
 
+            // 先取得目前使用者的 ID
+            const currentUserId = await getCurrentUserId();
+            
             let html = '';
             posts.forEach(post => {
                 const createdDate = new Date(post.created_time).toLocaleDateString('zh-TW');
@@ -306,7 +309,7 @@
                                 </h5>
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="badge bg-secondary">${post.status || 'draft'}</span>
-                                    ${post.user_id === getCurrentUserId() ? 
+                                    ${post.user_id == currentUserId ? 
                                         `<a href="/posts/${post.posts_id}/edit" class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-edit"></i> 編輯
                                         </a>` : ''

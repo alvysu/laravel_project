@@ -7,7 +7,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use App\Models\User;
 
 class UserController extends Controller
 {
@@ -20,14 +20,10 @@ class UserController extends Controller
             // 使用 middleware 驗證後的認證使用者
             $userId = $request->user()->id;
 
-            // 使用 PDO 查詢使用者資料
-            $pdo = DB::connection()->getPdo();
-            $stmt = $pdo->prepare("SELECT id, username, email FROM users WHERE id = ?");
-            $stmt->execute([$userId]);
-            //\PDO::FETCH_ASSOC 代表只取欄位名稱當索引，不要取數字索引。
-            $userData = $stmt->fetch(\PDO::FETCH_ASSOC);
+            // 使用 Eloquent ORM 查詢使用者資料
+            $user = User::select('id', 'username', 'email')->find($userId);
 
-            if (!$userData) {
+            if (!$user) {
                 return response()->json([
                     'success' => false,
                     'message' => '使用者不存在'
@@ -36,7 +32,7 @@ class UserController extends Controller
 
             return response()->json([
                 'success' => true,
-                'user' => $userData
+                'user' => $user
             ]);
 
         } catch (\Exception $e) {
@@ -75,13 +71,11 @@ class UserController extends Controller
                 ], 422);
             }
 
-            // 使用 PDO 更新資料
-            $pdo = DB::connection()->getPdo();
-            $stmt = $pdo->prepare("UPDATE users SET username = ?, email = ? WHERE id = ?");
-            $stmt->execute([
-                trim($request->username),
-                trim($request->email),
-                $userId
+            // 使用 Eloquent ORM 更新資料
+            $user = User::find($userId);
+            $user->update([
+                'username' => trim($request->username),
+                'email' => trim($request->email)
             ]);
 
             return response()->json([
@@ -126,14 +120,11 @@ class UserController extends Controller
                 ], 422);
             }
 
-            // 使用 PDO 查詢目前密碼
-            $pdo = DB::connection()->getPdo();
-            $stmt = $pdo->prepare("SELECT password FROM users WHERE id = ?");
-            $stmt->execute([$userId]);
-            $userData = $stmt->fetch(\PDO::FETCH_ASSOC);
+            // 使用 Eloquent ORM 查詢使用者
+            $user = User::find($userId);
 
             // 驗證目前密碼
-            if (!Hash::check($request->current_password, $userData['password'])) {
+            if (!Hash::check($request->current_password, $user->password)) {
                 return response()->json([
                     'success' => false,
                     'message' => '目前密碼錯誤'
@@ -141,9 +132,9 @@ class UserController extends Controller
             }
 
             // 更新密碼
-            $newHashedPassword = Hash::make($request->new_password);
-            $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
-            $stmt->execute([$newHashedPassword, $userId]);
+            $user->update([
+                'password' => Hash::make($request->new_password)
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -181,14 +172,11 @@ class UserController extends Controller
                 ], 422);
             }
 
-            // 使用 PDO 查詢密碼
-            $pdo = DB::connection()->getPdo();
-            $stmt = $pdo->prepare("SELECT password FROM users WHERE id = ?");
-            $stmt->execute([$userId]);
-            $userData = $stmt->fetch(\PDO::FETCH_ASSOC);
+            // 使用 Eloquent ORM 查詢使用者
+            $user = User::find($userId);
 
             // 驗證密碼
-            if (!Hash::check($request->password, $userData['password'])) {
+            if (!Hash::check($request->password, $user->password)) {
                 return response()->json([
                     'success' => false,
                     'message' => '密碼錯誤'
@@ -196,8 +184,7 @@ class UserController extends Controller
             }
 
             // 刪除帳號
-            $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
-            $stmt->execute([$userId]);
+            $user->delete();
 
             return response()->json([
                 'success' => true,

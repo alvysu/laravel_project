@@ -5,7 +5,8 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
+use App\Models\Post;
+use App\Models\File;
 
 class ResourceOwner
 {
@@ -18,7 +19,7 @@ class ResourceOwner
      */
     public function handle(Request $request, Closure $next)
     {
-        // 檢查是否已經通過認證
+        // 步驟 1：檢查是否已經通過認證
         if (!$request->user()) {
             return response()->json([
                 'success' => false,
@@ -29,15 +30,13 @@ class ResourceOwner
         $authenticatedUserId = $request->user()->id;
         $resourceUserId = null;
 
-        // 根據不同的路由參數來取得資源擁有者 ID
+        // 步驟 2：根據不同的路由參數來取得資源擁有者 ID
         if ($request->route('postId')) {
             // 文章相關操作
             $postId = $request->route('postId');
             try {
-                $pdo = DB::connection()->getPdo();
-                $stmt = $pdo->prepare("SELECT user_id FROM posts WHERE posts_id = ?");
-                $stmt->execute([$postId]);
-                $post = $stmt->fetch(\PDO::FETCH_ASSOC);
+                // 使用 Eloquent ORM 查詢文章
+                $post = Post::where('posts_id', $postId)->first();
                 
                 if (!$post) {
                     return response()->json([
@@ -46,7 +45,7 @@ class ResourceOwner
                     ], 404);
                 }
                 
-                $resourceUserId = $post['user_id'];
+                $resourceUserId = $post->user_id;
             } catch (\Exception $e) {
                 return response()->json([
                     'success' => false,
@@ -57,10 +56,8 @@ class ResourceOwner
             // 檔案相關操作
             $fileId = $request->route('fileId');
             try {
-                $pdo = DB::connection()->getPdo();
-                $stmt = $pdo->prepare("SELECT user_id FROM files WHERE id = ?");
-                $stmt->execute([$fileId]);
-                $file = $stmt->fetch(\PDO::FETCH_ASSOC);
+                // 使用 Eloquent ORM 查詢檔案
+                $file = File::where('id', $fileId)->first();
                 
                 if (!$file) {
                     return response()->json([
@@ -69,7 +66,7 @@ class ResourceOwner
                     ], 404);
                 }
                 
-                $resourceUserId = $file['user_id'];
+                $resourceUserId = $file->user_id;
             } catch (\Exception $e) {
                 return response()->json([
                     'success' => false,
@@ -78,7 +75,7 @@ class ResourceOwner
             }
         }
 
-        // 檢查是否成功取得資源擁有者 ID
+        // 步驟 3：檢查是否成功取得資源擁有者 ID
         if ($resourceUserId === null) {
             return response()->json([
                 'success' => false,
@@ -86,7 +83,7 @@ class ResourceOwner
             ], 500);
         }
 
-        // 檢查資源擁有者是否為當前登入使用者
+        // 步驟 4：檢查資源擁有者是否為當前登入使用者
         // 確保類型一致進行比較
         if ((string)$resourceUserId !== (string)$authenticatedUserId) {
             return response()->json([
@@ -95,6 +92,8 @@ class ResourceOwner
             ], 403);
         }
 
+        // 步驟 5：繼續到下一個 middleware 或控制器
+        // 如果沒有下一個 middleware 或控制器，則會執行到最後一個 middleware 或控制器
         return $next($request);
     }
 }
