@@ -289,11 +289,11 @@
 
                 const response = await fetch(`/api/posts/${currentPostId}`, {
                     method: 'PUT',
-                                    headers: {
+                    headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
                     'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
-                },
+                    },
                     body: JSON.stringify(postData)
                 });
 

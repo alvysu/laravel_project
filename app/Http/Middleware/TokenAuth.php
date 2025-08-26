@@ -18,7 +18,7 @@ class TokenAuth
      */
     public function handle(Request $request, Closure $next)
     {
-        // 檢查是否有有效的 Bearer token
+        // 步驟 1：檢查是否有有效的 Bearer token
         if (!$request->bearerToken()) {
             return response()->json([
                 'success' => false,
@@ -27,7 +27,7 @@ class TokenAuth
             ], 401);
         }
 
-        // 使用 Sanctum 的認證機制（不重複造輪子）
+        // 步驟 2：使用 Sanctum 的認證機制（不重複造輪子）
         if (!Auth::guard('sanctum')->check()) {
             return response()->json([
                 'success' => false,
@@ -36,10 +36,10 @@ class TokenAuth
             ], 401);
         }
 
-        // 取得認證使用者
+        // 步驟 3：取得認證使用者
         $user = Auth::guard('sanctum')->user();
 
-        // 檢查 token 能力（abilities）
+        // 步驟 4：檢查 token 能力（abilities）
         if (!$this->checkTokenAbilities($request, $user)) {
             return response()->json([
                 'success' => false,
@@ -48,15 +48,17 @@ class TokenAuth
             ], 403);
         }
 
-        // 使用 setUserResolver 而不是 merge，避免污染輸入資料
+        // 步驟 5：使用 setUserResolver注入使用者資訊到請求中，而不是 merge，避免污染輸入資料
         $request->setUserResolver(function () use ($user) {
             return $user;
         });
 
-        // 將額外的認證資訊放在 attributes 中，避免與輸入資料衝突
+        // 步驟 6：將額外的認證資訊放在 attributes 中，避免與輸入資料衝突
         $request->attributes->set('auth.user_id', $user->id);
         $request->attributes->set('auth.username', $user->username);
 
+        // 步驟 7：繼續到下一個 middleware 或控制器
+        // 如果沒有下一個 middleware 或控制器，則會執行到最後一個 middleware 或控制器
         return $next($request);
     }
 
